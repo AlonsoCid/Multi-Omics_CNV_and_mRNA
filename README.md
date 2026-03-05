@@ -1,10 +1,10 @@
- # Multi-Omics Integration Pipeline: Breast Cancer CNA and Gene Expression
+ # Multi-Omics Integration Pipeline: Breast Cancer CNV and Gene Expression
  
-This project showcases a computational pipeline designed to integrate and analyze DNA copy number alterations (CNA) and gene expression data. The analysis focuses on breast cancer samples, demonstrating the application of advanced N-dimensional approaches to identify correlated biological patterns across different omics layers.
+This project showcases a computational pipeline designed to integrate and analyze DNA copy number variations (CNV), although alterations would be the proper term for changes in somatic cells, and gene expression data. The analysis focuses on breast cancer samples, demonstrating the application of advanced N-dimensional approaches to identify correlated biological patterns across different omics layers.
 
 ## 1. Data and structure
 
-The data comes from [Pollack J. R. et al. (2002)](https://pubmed.ncbi.nlm.nih.gov/12297621/). It was generated using a two-color microarray containing 6,691 genes. Each sample was hybridized against the same reference (a normal female leukocyte sample), meaning all expression and CNA values are presented as ratios. The experiment includes 41 samples, 4 breast cancer cell lines, 28 clinical samples from Norway, and 9 clinical samples from Stanford. 
+The data comes from [Pollack J. R. et al. (2002)](https://pubmed.ncbi.nlm.nih.gov/12297621/). It was generated using a two-color microarray containing 6,691 genes. Each sample was hybridized against the same reference (a normal female leukocyte sample), meaning all expression and CNV values are presented as ratios. The experiment includes 41 samples, 4 breast cancer cell lines, 28 clinical samples from Norway, and 9 clinical samples from Stanford. 
 
 The core data is stored in the pollack.RData file, which contains two primary data frames:
 
@@ -28,11 +28,13 @@ The datasets contains the following variables:
 
 ## 2. Analysis and Results
 
-### Data analysis using FactomineR R-package to the Pollack experiment
+### Data analysis using FactoMineR R-package to the Pollack experiment
 
-Before combining the data into a Multy Factor Analysis (MFA), lets explore the structure of each omics layer to make sure there is no outliers or clear barch effect. CNA indicate if cancer cells have change the structure of the DNA by deleting or amplifiying gene copies, meanwhile the expression analysis measure the mRNAs,the level of expression of each gene.
+FactoMineR is an R package dedicated to exploratory multivariate data analysis. In this pipeline, it is to perform an unsupervised Multiple Factor Analysis (MFA), which integrates the RNA expression and DNA copy number datasets without supplying prior sample labels. This approach reveals the natural biological variance and structural groupings within the data, highlighting which specific omics layers and genes are responsible for the diferentiation between breast cancer cell lines and clinical samples.
 
-#### CNA PCA
+Before combining the data into a Multy Factor Analysis (MFA), lets explore the structure of each omics layer to make sure there is no outliers or clear barch effect. CNV indicate if cancer cells have change the structure of the DNA by deleting or amplifiying gene copies, meanwhile the expression analysis measure the mRNAs,the level of expression of each gene.
+
+#### CNV PCA
 ![pca_plot](results/pca.png)
 
 Although the PCA analysis reveals clear differences between the cell lines and the clinical samples, it shows a lot of overlapping between Stanford and Norway samples.
@@ -47,9 +49,9 @@ Now lets perform a MFA. We can't simply merge the RNA and CNV tables and ran a s
 
 ![mfa_layer](results/mfa_layer.png)
 
-The MFA Groups representation plot reveals how each omics block contributes to the overall diferences. Dimension 1 (13.87% variance) is driven equally by both the transcriptomic (RNA) and genomic (CNA) blocks, representing a shared biological signature. This first dimension also captures the variance introduced by the biological diferences between cell origin (cond). Dimension 2 (7.12% variance) is driven almost entirely by the CNV block, capturing structural genomic variance that is independent of gene expression.
+The MFA Groups representation plot reveals how each omics block contributes to the overall diferences. Dimension 1 (13.87% variance) is driven equally by both the transcriptomic (RNA) and genomic (CNV) blocks, representing a shared biological signature. This first dimension also captures the variance introduced by the biological diferences between cell origin (cond). Dimension 2 (7.12% variance) is driven almost entirely by the CNV block, capturing structural genomic variance that is independent of gene expression.
 
-This tables show the top 10 most relevant genes for each dimension of the FMA. For dimension 1 the genes come from the RNA expression block and for dimension 2 from the CNA block. This selection is based on the MFA results, since each block seems to have more effect on its respective dimension.
+This tables show the top 10 most relevant genes for each dimension of the FMA. For dimension 1 the genes come from the RNA expression block and for dimension 2 from the CNV block. This selection is based on the MFA results, since each block seems to have more effect on its respective dimension.
 
 #### Genes dimension 1
 | Gene | Chr | Start | Value |
@@ -79,9 +81,57 @@ This tables show the top 10 most relevant genes for each dimension of the FMA. F
 | *MADD* | 11 | 47,269,161 | 0.6878 |
 | *SLC2A1* | 1 | 42,925,375 | 0.6726 |
 
-The Value column represent the correlation coefficient between the gene's expression or CNA ratio and the dimension of the MFA, indicating its contribution to the variance.
+The Value column represent the correlation coefficient between the gene's expression or CNV ratio and the dimension of the MFA, indicating its contribution to the variance.
 
 Check [this circos plot](results/mfa_circos.pdf) to see a visual representation of the chromosome position and effect (the file is in PDF because uses a vector format and allows for greater resolution than a PNG or JPG).
 
 ### Apply the DIABLO method using mixOmics R-package
-...
+
+mixOmics is a specialized package for the supervised integration and feature selection of highly dimensional biological datasets. Its framework Data Integration Analysis for Biomarker Discovery using Latent Variable Approaches for Omics Studies (DIABLO) is used to actively search for a sparse, highly correlated multi-omics signature that optimally discriminates between defined sample origins (Norway, Stanford, and cell lines). By mathematically tuning the model to keep only the most informative features, this step provides a robust, predictive biomarker panel and a distinct molecular heatmap that perfectly separates the experimental groups.
+
+#### Model component selection test
+
+![DIABLO_model_perf](results/DIABLO_model_perf.png)
+
+This plot evaluates the DIABLO model's classification error rate across 5 potential components. Two components seems the most apropiate choice, because the error rate drops sharply from the first to the second component, but plateaus or slightly increases thereafter, indicating that adding more dimensions does not meaningfully improve the model's predictive accuracy.
+
+#### Expresion block selected genes
+| Gene | value.var |
+| :--- | :--- |
+| *ARCN1.m* | -0.91250205 |
+| *SERPING1.m* | 0.29114809 |
+| *GSS.m* | -0.21849347 |
+| *YWHAG.m* | -0.17021696 |
+| *FANCG.m* | -0.07654798 |
+
+#### CNV selected gene
+| Gene | value.var |
+| :--- | :--- |
+| *AMPH.v* | -1 |
+
+DIABLO has successfully built a highly sparse model, it shrunk the multi-omics signature down to the absolute bare minimum needed to classify the cell lines. Just 5 genes and 1 CNV.
+
+![DIABLO_heatmap](results/DIABLO_heatmap.png)
+
+To interpret the final multi-omics signature selected by the DIABLO algorithm, a Clustered Image Map (CIM) was generated.
+
+The hierarchical clustering perfectly isolates the breast cancer cell lines (BT474, SKBR3, MCF7, T47D) into their own distinct clade. This confirms that the selected mRNA and CNV features form a robust signature capable of distinguishing in vitro models from primary clinical tumors. The clade also correctly clasify the Standfor and Norway samples although they share more homogenous expression and alteration patterns across the selected genomic signature.
+
+The heatmap maps the selected features across all model components. Biomarkers from the transcriptomic block (RNA, denoted by .m) and the genomic block (DNA, denoted by .v) work together to form visual blocks of up-regulation (red) and down-regulation (blue) that define the sample origins.
+
+The feature *POLR2B.v* was selected by the algorithm as a primary driver for Component 2 that is why it is not present in the previous Gene table.
+
+To see more plots regarding the model, check [this pdf](results/DIABLO_plots.pdf).
+
+#### Check model predictive power
+| | predicted.as.cell_line | predicted.as.NORWAY | predicted.as.STANFORD |
+| :--- | :---: | :---: | :---: |
+| **cell_line** | 4 | 0 | 0 |
+| **NORWAY** | 0 | 28 | 0 |
+| **STANFORD** | 0 | 0 | 9 |
+
+In order too quantitatively evaluate the discriminative power of the final DIABLO multi-omics model, a confusion matrix was generated by predicting the sample origins using the Centroids Distance metric. The model achieved perfect classification accuracy on the training set, successfully categorizing all 41 samples into their correct respective groups (Cell line, Norway, or Stanford) without a single misclassification.
+
+The 0% training error rate confirms that the strictly filtered subset of genomic (CNV) and transcriptomic (mRNA) features selected by the model is highly robust. Despite the molecular similarities between the Norway and Stanford clinical cohorts observed in earlier unsupervised analyses, the supervised mixOmics approach successfully identified a latent mathematical signature capable of completely distinguishing them.
+
+### Conclusions

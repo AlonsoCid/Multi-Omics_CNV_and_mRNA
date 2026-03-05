@@ -2,11 +2,12 @@ library(FactoMineR)
 library(OmicCircos)
 library(mixOmics)
 
-### FactoMinerR analysis----
-
+# Load data
 load("pollack.RData")
 head(pollack.nox)
 names(pollack.nox)
+
+### FactoMinerR analysis----
 
 ## Copy Number Variant PCS
 cnv <- pollack.nox[, 8:48]
@@ -112,3 +113,121 @@ circos(R=380, cir="hg18", W=20, mapping=top10.24circos, type="label",
 dev.off()
 
 ### mixOmics DIABLO analysis---- 
+#Using R package mixOmics, apply the DIABLO method to the Pollack 
+#experiment (use the pollack.nox from pollack.RData) with the top CV 100 
+#genes of CN altered and also the top CV 100 genes of expression (highest CV). 
+
+expr <- pollack.nox[, 49:89]
+cnv <- pollack.nox[, 8:48]
+
+# Compute Coefficient of Variation (CV) and extract the genes with the highest variation
+cv<-apply(expr,1,sd)/abs(apply(expr,1,mean))
+top.100<-head(sort(cv,decreasing=TRUE),100)
+
+cv<-apply(cnv,1,sd)/abs(apply(cnv,1,mean))
+top.100<-head(sort(cv,decreasing=TRUE),100)
+
+# mixOmics requires that features in different blocks have different names. .m=mRNA & .v=CNV
+expr.f <- expr[names(top.100),]
+rownames(expr.f) <- paste(pollack.nox[names(top.100),"gene"],"m",sep=".") #names must be different in the blocks
+
+cnv.f <- cnv[names(top.100),]
+rownames(cnv.f) <- paste(pollack.nox[names(top.100),"gene"],"v",sep=".") #names must be different in the blocks
+
+# Format data for mixOmics
+colnames(expr.f) <- colnames(cnv.f)
+str(expr.f)
+str(cnv.f)
+
+# Define Y as a the factor the algorithm needs to predict
+cond <- c(rep("cell_line", 4), rep("NORWAY", 28), rep("STANFORD", 9))
+Y=as.factor(cond)
+
+# Prepare data X
+data = list(rna =t(expr.f), dna = t(cnv.f))
+
+# Design the matrix
+design = matrix(0.1, ncol = length(data), nrow = length(data), 
+                dimnames = list(names(data), names(data)))
+diag(design) = 0
+design 
+
+## Apply method
+# Set initial model
+sgccda.res = block.splsda(X = data, Y = Y, ncomp = 5, design = design)
+
+# Evaluate performance
+set.seed(123) 
+perf.diablo = perf(sgccda.res, validation = 'Mfold', folds = 4, nrepeat = 10) # 10 folds gives stability but might be too much for the number of samples/conditions
+
+# Lists the different outputs
+png("results/DIABLO_model_perf.png", width = 800, height = 600)
+plot(perf.diablo)
+dev.off()
+
+perf.diablo$choice.ncomp$WeightedVote
+
+#Although plots on Mahalanobis distance are not behaving as expected, lets take two components
+ncomp = 2
+
+## Feature selection tuning
+s.keep <- c(1:10) # Number of features that can be used for each omics block
+test.keepX = list (rna = s.keep, dna = s.keep)
+
+# Parallelization params to use all but 1 CPU core
+BPPARAM <- BiocParallel::MulticoreParam(workers = parallel::detectCores()-1)
+
+# Tunning step
+t1 = Sys.time() 
+# Computes M-fold or Leave-One-Out Cross-Validation scores based on a user-input grid to determine the optimal parsity parameters 
+tune.TCGA = tune.block.splsda(X = data, Y = Y, ncomp = ncomp,
+                              test.keepX = test.keepX, design = design,
+                              validation = 'Mfold', folds = 4, nrepeat = 1,
+                              BPPARAM = BPPARAM, 
+                              dist = "centroids.dist")
+t2 = Sys.time()
+running_time = t2 - t1
+running_time
+
+# Extract optimal number of RNA and CNV features
+list.keepX = tune.TCGA$choice.keepX
+list.keepX # The parallelization step doesn't set a fix seed per core, so the result can vary between runs
+
+
+## Apply method with tuned parameters
+sgccda.res = block.splsda(X = data, Y = Y, ncomp = ncomp, 
+                          keepX = list.keepX, design = design)
+
+# Selected biomarkers (genes the model kept to build the predictive components)
+head(selectVar(sgccda.res)$rna$value,10) 
+head(selectVar(sgccda.res)$dna$value,10)
+
+## Plots obtained from DIABLO model
+
+# 1. Diagnostic and structural plots
+pdf("results/DIABLO_plots.pdf")
+plotDiablo(sgccda.res, ncomp = 1)
+plotArrow(sgccda.res, ind.names = FALSE, legend = TRUE, title = 'DIABLO')
+plotVar(sgccda.res, var.names = TRUE, style = 'graphics', legend = TRUE, 
+        pch = c(16, 17), cex = c(2,2), col = c('darkorchid', 'lightgreen'))
+circosPlot(sgccda.res, cutoff = 0.67, line = TRUE, 
+           color.blocks= c('darkorchid', 'lightgreen'),
+           color.cor = c("chocolate3","grey20"), size.labels = 1.5, size.variables=0.5)
+plotLoadings(sgccda.res, comp = 1, contrib = 'max', method = 'median')
+plotLoadings(sgccda.res, comp = 2, contrib = 'max', method = 'median')
+dev.off()
+
+# 2. Final multi-omics signature heatmap
+png("results/DIABLO_heatmap.png", width = 800, height = 800)
+cimDiablo(sgccda.res, margins=c(10,20))
+dev.off()
+
+## Test model's predictive power by asking it to predict the labels of the data
+predicted <- predict(sgccda.res, newdata = data)
+confusion.mat = get.confusion_matrix(truth = Y, 
+                                     predicted = predicted$WeightedVote$centroids.dist[,2])
+confusion.mat
+
+# Error Calculation
+sum(c(confusion.mat[upper.tri(confusion.mat)],confusion.mat[lower.tri(confusion.mat)]))/sum(diag(confusion.mat))
+
