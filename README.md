@@ -53,7 +53,7 @@ The MFA Groups representation plot reveals how each omics block contributes to t
 
 This tables show the top 10 most relevant genes for each dimension of the FMA. For dimension 1 the genes come from the RNA expression block and for dimension 2 from the CNV block. This selection is based on the MFA results, since each block seems to have more effect on its respective dimension.
 
-#### Genes dimension 1
+#### Genes dimension 1 (mRNA)
 | Gene | Chr | Start | Value |
 | :--- | :--- | :--- | :--- |
 | *ACTA2* | 10 | 88,935,074 | 0.9139 |
@@ -67,7 +67,7 @@ This tables show the top 10 most relevant genes for each dimension of the FMA. F
 | *LRP1* | 12 | 57,128,493 | 0.8644 |
 | *LUM* | 12 | 91,102,629 | 0.8912 |
 
-#### Genes dimension 2
+#### Genes dimension 2 (CNV)
 | Gene | Chr | Start | Value |
 | :--- | :--- | :--- | :--- |
 | *ACTN3* | 11 | 66,546,395 | 0.6886 |
@@ -135,3 +135,7 @@ In order too quantitatively evaluate the discriminative power of the final DIABL
 The 0% training error rate confirms that the strictly filtered subset of genomic (CNV) and transcriptomic (mRNA) features selected by the model is highly robust. Despite the molecular similarities between the Norway and Stanford clinical cohorts observed in earlier unsupervised analyses, the supervised mixOmics approach successfully identified a latent mathematical signature capable of completely distinguishing them.
 
 ### Conclusions
+
+This multi-omics pipeline successfully demonstrates the power of combining CNV data with gene expression data to resolve complex classification of breast cancer samples. Initial exploratory analysis revealed that the transcriptomic layer alone has substantial discriminative power, PCA on gene expression successfully separated the in vitro cell lines along the primary dimension and cleanly distinguished the Stanford and Norway clinical cohorts along the second dimension. By evaluating these omics layers simultaneously using MFA, the model further revealed that the primary sample variance is driven by a shared transcriptomic and genomic signal, whereas the secondary variance is almost entirely driven by copy number alterations.
+
+While unsupervised methods successfully grouped the samples, the supervised DIABLO also provided excellent results, successfully classifying the different samples using both omic layers. The test shows it can classify all sample origins with a 0% training error rate, using just two model components. Across all visual outputs, including the final Clustered Image Map, the breast cancer cell lines consistently formed a distinct structural and transcriptional outgroup. Also, it is important to consider, the DIABLO model was tuned to be as sparse as possible; considering it uses only 6 biomarkers, it is an impressive result. Ultimately, this pipeline shows how multi-omics integration allows for efficient and reliable classification. This is extremely important, especially when treating cancer using hyper specialized drugs, where identifying the subtype of cancer is vital for the survival of the patient.
