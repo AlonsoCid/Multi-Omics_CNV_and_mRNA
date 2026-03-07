@@ -7,10 +7,13 @@ load("pollack.RData")
 head(pollack.nox)
 names(pollack.nox)
 
+## Extract omic layers
+cnv <- pollack.nox[, 8:48]
+expr <- pollack.nox[, 49:89]
+
 ### FactoMinerR analysis----
 
 ## Copy Number Variant PCS
-cnv <- pollack.nox[, 8:48]
 head(cnv)
 cnv.t<-t(cnv)
 # assign names, we include a exp suffix to differentiate genes from expression
@@ -29,7 +32,6 @@ plot(res.pca.cnv,habillage=1)
 dev.off()
 
 ## Expression PCA
-expr <- pollack.nox[, 49:89]
 colnames(expr) <- colnames(cnv) #To perform later MFA, we need to have the same names
 head(expr)
 
@@ -113,12 +115,6 @@ circos(R=380, cir="hg18", W=20, mapping=top10.24circos, type="label",
 dev.off()
 
 ### mixOmics DIABLO analysis---- 
-#Using R package mixOmics, apply the DIABLO method to the Pollack 
-#experiment (use the pollack.nox from pollack.RData) with the top CV 100 
-#genes of CN altered and also the top CV 100 genes of expression (highest CV). 
-
-expr <- pollack.nox[, 49:89]
-cnv <- pollack.nox[, 8:48]
 
 # Compute Coefficient of Variation (CV) and extract the genes with the highest variation
 cv<-apply(expr,1,sd)/abs(apply(expr,1,mean))
@@ -199,8 +195,10 @@ sgccda.res = block.splsda(X = data, Y = Y, ncomp = ncomp,
                           keepX = list.keepX, design = design)
 
 # Selected biomarkers (genes the model kept to build the predictive components)
-head(selectVar(sgccda.res)$rna$value,10) 
+head(selectVar(sgccda.res)$rna$value,10)
+head(selectVar(sgccda.res, comp = 2)$rna$value,10) 
 head(selectVar(sgccda.res)$dna$value,10)
+head(selectVar(sgccda.res, comp = 2)$dna$value,10) 
 
 ## Plots obtained from DIABLO model
 
