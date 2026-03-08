@@ -7,7 +7,7 @@ load("pollack.RData")
 head(pollack.nox)
 names(pollack.nox)
 
-## Extract omic layers
+# Extract omic layers
 cnv <- pollack.nox[, 8:48]
 expr <- pollack.nox[, 49:89]
 
@@ -163,7 +163,7 @@ dev.off()
 
 perf.diablo$choice.ncomp$WeightedVote
 
-#Although plots on Mahalanobis distance are not behaving as expected, lets take two components
+# Although plots on Mahalanobis distance are not behaving as expected, lets take two components
 ncomp = 2
 
 ## Feature selection tuning

@@ -1,0 +1,10 @@
+name: multiomics
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base>=4.2.0
+  - r-factominer
+  - bioconductor-omiccircos
+  - bioconductor-mixomics
