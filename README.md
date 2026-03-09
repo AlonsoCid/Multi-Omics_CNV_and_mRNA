@@ -26,7 +26,16 @@ The dataset contains the following variables:
 - start: Starting position in the chromosome.
 - end: Ending position in the chromosome.
 
-## 2. Analysis and Results
+## 2. Pipeline Structure
+The analysis is automated using Snakemake, divided into four modular steps:
+
+  - 01_pca.R: Performs independent Principal Component Analysis (PCA) for initial data exploration.
+
+  - 02_unsupervised_mfa.R: Integrates the omics layers using Multiple Factor Analysis (MFA) to evaluate shared versus block-specific variance, extracting the top correlated features and mapping them to their chromosomal coordinates via a Circos plot.
+
+  - 03_supervised_diablo.R: Performs feature selection, tunes sparsity parameters, and builds a supervised statistical model to extract a highly discriminative multi-omics signature and evaluate performance.
+
+## 3. Analysis and Results
 
 ### Analysis using PCA to each omic layer
 
@@ -133,10 +142,15 @@ In order to quantitatively evaluate the discriminative power of the final DIABLO
 
 The 0% training error rate confirms that the strictly filtered subset of genomic (CNV) and transcriptomic (mRNA) features selected by the model is highly robust. Despite the molecular similarities between the Norway and Stanford clinical cohorts observed in earlier unsupervised analyses, the supervised mixOmics approach successfully identified a latent mathematical signature capable of completely distinguishing them.
 
-## 3. Conclusions
+## 4. Conclusions
 
 This multi-omics pipeline successfully demonstrates the power of combining CNV data with gene expression data to resolve complex classification of breast cancer samples. Initial exploratory analysis revealed that the transcriptomic layer alone has substantial discriminative power, PCA on gene expression successfully separated the in vitro cell lines along the primary dimension and cleanly distinguished the Stanford and Norway clinical cohorts along the second dimension. By evaluating these omics layers simultaneously using MFA, the model further revealed that the primary sample variance is driven by a shared transcriptomic and genomic signal, whereas the secondary variance is almost entirely driven by copy number alterations.
 
 While unsupervised methods successfully grouped the samples, the supervised DIABLO also provided excellent results, successfully classifying the different samples using both omic layers. The test shows it can classify all sample origins with a 0% training error rate, using just two model components. Across all visual outputs, including the final Clustered Image Map, the breast cancer cell lines consistently formed a distinct structural and transcriptional outgroup. Considering the primary component relies on just 18 biomarkers, it is an impressive result. Ultimately, this pipeline shows how multi-omics integration allows for efficient and reliable classification. This is extremely important, especially when treating cancer using hyper specialized drugs, where identifying the subtype of cancer is vital for the survival of the patient.
 
-## 4. How to reproduce
+## 5. How to reproduce
+
+1. Clone the repo on a UNIX system or wsl: `git clone https://github.com/AlonsoCid/Multi-Omics_CNV_and_mRNA`
+2. Navigate to the project folder: `cd Multi-Omics_CNV_and_mRNA`
+3. Build the environment using Snakemake: `snakemake --cores 1 --use-conda`  
+Snakemake will automatically load the data, run the 3 scripts in order and generate the plots and tables in .results/.
