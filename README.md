@@ -27,7 +27,7 @@ The dataset contains the following variables:
 - end: Ending position in the chromosome.
 
 ## 2. Pipeline Structure
-The analysis is automated using Snakemake, divided into four modular steps:
+The analysis is automated using Snakemake, divided into three modular steps:
 
   - 01_pca.R: Performs independent Principal Component Analysis (PCA) for initial data exploration.
 
