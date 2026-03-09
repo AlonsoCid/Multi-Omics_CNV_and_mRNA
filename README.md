@@ -28,9 +28,7 @@ The dataset contains the following variables:
 
 ## 2. Analysis and Results
 
-### Data analysis using FactoMineR R-package to the Pollack experiment
-
-FactoMineR is an R package dedicated to exploratory multivariate data analysis. In this pipeline, it is used to perform an unsupervised Multiple Factor Analysis (MFA), which integrates the RNA expression and DNA copy number datasets without supplying prior sample labels. This approach reveals the natural biological variance and structural groupings within the data, highlighting which specific omics layers and genes are responsible for the differentiation between breast cancer cell lines and clinical samples.
+### Analysis using PCA to each omic layer
 
 Before combining the data into a Multiple Factor Analysis (MFA), let's explore the structure of each omics layer to make sure there is no outliers or clear batch effect. CNVs indicate if cancer cells have changed the structure of the DNA by deleting or amplifiying gene copies, meanwhile the expression analysis measures the mRNAs, the level of expression of each gene.
 
@@ -44,8 +42,11 @@ Although the PCA analysis reveals clear differences between the cell lines and t
 
 The expression PCA clearly shows differences between the cell lines and the rest of the samples (in dim 1) and also between Stanford and Norway samples (in dim 2).
 
-#### MFA
-Now let's perform a MFA. We can't simply merge the RNA and CNV tables and run a standard PCA, the dataset with higher variance (or more variables) would completely dominate the results. The MFA() function prevents this by mathematically weighting each block (dividing each by its first principal eigenvalue) so that the RNA block and the CNV block have an equal say in the final geometric space.
+### Analysis using FactoMineR R-package
+
+FactoMineR is an R package dedicated to exploratory multivariate data analysis. In this pipeline, it is used to perform an unsupervised Multiple Factor Analysis (MFA), which integrates the RNA expression and DNA copy number datasets without supplying prior sample labels. This approach reveals the natural biological variance and structural groupings within the data, highlighting which specific omics layers and genes are responsible for the differentiation between breast cancer cell lines and clinical samples.
+
+We can't simply merge the RNA and CNV tables and run a standard PCA, the dataset with higher variance (or more variables) would completely dominate the results. The MFA() function prevents this by mathematically weighting each block (dividing each by its first principal eigenvalue) so that the RNA block and the CNV block have an equal say in the final geometric space.
 
 ![mfa_layer](results/mfa_layer.png)
 
@@ -85,7 +86,7 @@ The Value column represent the correlation coefficient between the gene's expres
 
 Check [this circos plot](results/mfa_circos.pdf) to see a visual representation of the chromosome position and effect (the file is in PDF because uses a vector format and allows for greater resolution than a PNG or JPG).
 
-### Apply the DIABLO method using mixOmics R-package
+### Analysis using the DIABLO method using mixOmics R-package
 
 mixOmics is a specialized package for the supervised integration and feature selection of highly dimensional biological datasets. Its framework Data Integration Analysis for Biomarker Discovery using Latent Variable Approaches for Omics Studies (DIABLO) is used to actively search for a sparse, highly correlated multi-omics signature that optimally discriminates between defined sample origins (Norway, Stanford, and cell lines). By mathematically tuning the model to keep only the most informative features, this step provides a robust, predictive biomarker panel and a distinct molecular heatmap that perfectly separates the experimental groups.
 
@@ -132,8 +133,10 @@ In order to quantitatively evaluate the discriminative power of the final DIABLO
 
 The 0% training error rate confirms that the strictly filtered subset of genomic (CNV) and transcriptomic (mRNA) features selected by the model is highly robust. Despite the molecular similarities between the Norway and Stanford clinical cohorts observed in earlier unsupervised analyses, the supervised mixOmics approach successfully identified a latent mathematical signature capable of completely distinguishing them.
 
-### Conclusions
+## 3. Conclusions
 
 This multi-omics pipeline successfully demonstrates the power of combining CNV data with gene expression data to resolve complex classification of breast cancer samples. Initial exploratory analysis revealed that the transcriptomic layer alone has substantial discriminative power, PCA on gene expression successfully separated the in vitro cell lines along the primary dimension and cleanly distinguished the Stanford and Norway clinical cohorts along the second dimension. By evaluating these omics layers simultaneously using MFA, the model further revealed that the primary sample variance is driven by a shared transcriptomic and genomic signal, whereas the secondary variance is almost entirely driven by copy number alterations.
 
 While unsupervised methods successfully grouped the samples, the supervised DIABLO also provided excellent results, successfully classifying the different samples using both omic layers. The test shows it can classify all sample origins with a 0% training error rate, using just two model components. Across all visual outputs, including the final Clustered Image Map, the breast cancer cell lines consistently formed a distinct structural and transcriptional outgroup. Considering the primary component relies on just 18 biomarkers, it is an impressive result. Ultimately, this pipeline shows how multi-omics integration allows for efficient and reliable classification. This is extremely important, especially when treating cancer using hyper specialized drugs, where identifying the subtype of cancer is vital for the survival of the patient.
+
+## 4. How to reproduce
